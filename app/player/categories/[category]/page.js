@@ -1,52 +1,45 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from 'axios';
 import { useRouter } from "next/navigation";
 import { useParams } from 'next/navigation';
 
-const technologyQuizzes = [
-  { id: 1, title: "HTML Quiz", description: "Test your knowledge on the latest version of HTML." },
-  { id: 2, title: "Internet of Things (IoT) Quiz", description: "Learn and test your understanding of IoT." },
-  { id: 3, title: "Cloud Computing Quiz", description: "Explore the concepts and benefits of cloud computing." },
-  { id: 4, title: "Artificial Intelligence (AI) Quiz", description: "Test your knowledge of AI and its applications." },
-  { id: 5, title: "Blockchain Quiz", description: "Learn about the technology behind blockchain and cryptocurrencies." },
-  { id: 6, title: "5G vs 4G Quiz", description: "Test your knowledge of mobile network technologies." },
-  { id: 7, title: "Data Breach Quiz", description: "Learn how to prevent and respond to data breaches." },
-  { id: 8, title: "Cybersecurity Quiz", description: "Test your knowledge on protecting digital assets." },
-  { id: 9, title: "Software Development Quiz", description: "Learn about the life of a software developer." },
-  { id: 10, title: "Machine Learning Quiz", description: "Test your understanding of machine learning concepts." },
-  { id: 11, title: "Smart Home Quiz", description: "Test your knowledge of smart home technologies." },
-  { id: 12, title: "Quantum Computing Quiz", description: "Explore the world of quantum computing." },
-  { id: 13, title: "Virtual Reality (VR) Quiz", description: "Learn about VR and its applications in technology." },
-  { id: 14, title: "Augmented Reality (AR) Quiz", description: "Test your knowledge of AR and its real-world applications." },
-  { id: 15, title: "Cloud Storage Quiz", description: "Learn about the technology behind cloud storage." },
-  { id: 16, title: "Data Center Quiz", description: "Test your knowledge of data centers and their operations." },
-  { id: 17, title: "Software Frameworks Quiz", description: "Learn about the most popular software frameworks." },
-  { id: 18, title: "Mobile Apps Quiz", description: "Test your knowledge of mobile application development." },
-  { id: 19, title: "Big Data Quiz", description: "Explore the world of big data and its analysis." },
-  { id: 20, title: "Database Quiz", description: "Test your knowledge of databases and their management." },
-];
-
-export default function TechnologyQuizzes() {
+export default function Quizzes() {
   const router = useRouter();
   const { category } = useParams(); // Get category from dynamic route parameters
+  const [quizzes, setQuizzes] = useState([]); // Initialize as an array
   const [search, setSearch] = useState(""); // State for search input
 
+  useEffect(() => {
+    // Fetch quizzes from the backend
+    axios.get('http://localhost:5000/quizsets')
+      .then((response) => {
+        setQuizzes(response.data);
+      })
+      .catch((error) => {
+        console.error('Error fetching quizzes:', error);
+      });
+  }, []);
+
   const handleQuizClick = (id) => {
-    if (category) {
-      router.push(`/player/quizzes/${category}/${id}`);
-    }
+    router.push(`/player/quizzes/${category}/${id}`);
   };
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value); // Update search state
   };
 
-  const filteredQuizzes = technologyQuizzes.filter((quiz) =>
-    quiz.title.toLowerCase().includes(search.toLowerCase())
-  );
+  // Ensure that the quizzes are filtered by category_title and search term
+  const filteredQuizzes = quizzes
+    .filter((quiz) => quiz.category_title.toLowerCase() === category.toLowerCase()) // Matching category_title case-insensitively
+    .filter((quiz) => quiz.quiz_title.toLowerCase().includes(search.toLowerCase())); // Filter by search term
 
   if (!category) {
     return <div>Loading...</div>;
+  }
+
+  if (filteredQuizzes.length === 0) {
+    return <div>No quizzes found for this category.</div>;
   }
 
   return (
@@ -67,16 +60,15 @@ export default function TechnologyQuizzes() {
       <div className="max-w-screen-lg mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 px-4 mt-6">
         {filteredQuizzes.map((quiz) => (
           <div
-            key={quiz.id}
+            key={quiz.quiz_title} // Use quiz_title as the unique key for rendering
             className="flex flex-col items-center justify-center w-64 h-64 rounded-lg shadow-md p-4 cursor-pointer transform hover:scale-105 transition-transform"
             style={{
               backgroundColor: "#F3F4F6", // pale color for the background
             }}
           >
-            <h2 className="text-xl font-bold mb-4 text-center">{quiz.title}</h2>
-            <p className="text-gray-700 text-center mb-4">{quiz.description}</p>
+            <h2 className="text-xl font-bold mb-4 text-center">{quiz.quiz_title}</h2>           
             <button
-              onClick={() => handleQuizClick(quiz.id)}
+              onClick={() => handleQuizClick(quiz.quiz_title)}
               className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
             >
               Take Quiz

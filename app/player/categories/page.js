@@ -1,29 +1,7 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect ,useState } from "react";
+import axios from 'axios';
 import { useRouter } from "next/navigation";
-
-const categories = [
-  { name: "Technology", description: "Explore the latest in tech and gadgets." },
-  { name: "Science", description: "Dive into the wonders of science and discovery." },
-  { name: "Health", description: "Tips and advice for a healthy lifestyle." },
-  { name: "Travel", description: "Discover beautiful places around the world." },
-  { name: "Education", description: "Resources for learning and self-development." },
-  { name: "Sports", description: "Updates and news from the world of sports." },
-  { name: "Food", description: "Recipes and tips for food lovers." },
-  { name: "Art", description: "Explore creativity and artistic works." },
-  { name: "Music", description: "News and updates about music and artists." },
-  { name: "History", description: "Learn about events that shaped the world." },
-  { name: "Fashion", description: "Trends and updates in the world of fashion." },
-  { name: "Finance", description: "Tips and news about managing money." },
-  { name: "Gaming", description: "The latest in gaming and eSports." },
-  { name: "Movies", description: "Reviews and news about the latest movies." },
-  { name: "Books", description: "Recommendations and reviews for book lovers." },
-  { name: "Fitness", description: "Guides and tips for staying fit." },
-  { name: "Environment", description: "Awareness and tips to protect our planet." },
-  { name: "DIY", description: "Creative do-it-yourself projects and ideas." },
-  { name: "Parenting", description: "Advice and tips for raising children." },
-  { name: "Photography", description: "Tips and techniques for photographers." },
-];
 
 const paleColors = [
   "#FDE2E4", "#E2F0CB", "#D7E3FC", "#FCE1E4", "#FFF4E6",
@@ -35,9 +13,17 @@ const paleColors = [
 export default function Categories() {
   const [search, setSearch] = useState("");
   const router = useRouter();
+  const [categories, setCategories] = useState([]);
 
-  const handleCardClick = (name) => {
-    router.push(`/player/categories/${name.toLowerCase()}`);
+  useEffect(() => {
+    // Fetch categories from the backend
+    axios.get('http://localhost:5000/categories')
+      .then((response) => setCategories(response.data))
+      .catch((error) => console.error('Error fetching categories:', error));
+  }, []);
+
+  const handleCardClick = (category_title) => {
+    router.push(`/player/categories/${category_title.toLowerCase()}`);
   };
 
   const handleSearchChange = (event) => {
@@ -45,7 +31,7 @@ export default function Categories() {
   };
 
   const filteredCategories = categories.filter((category) =>
-    category.name.toLowerCase().includes(search)
+    category.category_title.toLowerCase().includes(search)
   );
 
   return (
@@ -86,13 +72,13 @@ export default function Categories() {
         {filteredCategories.map((category, index) => (
           <div
             key={index}
-            onClick={() => handleCardClick(category.name)}
+            onClick={() => handleCardClick(category.category_title)}
             className="flex flex-col items-center justify-center w-63 h-60 rounded-lg shadow-md p-3 cursor-pointer transform hover:scale-105 transition-transform"
             style={{
               backgroundColor: paleColors[index % paleColors.length],
             }}
           >
-            <h2 className="text-xl font-bold mb-4 text-center">{category.name}</h2>
+            <h2 className="text-xl font-bold mb-4 text-center">{category.category_title}</h2>
             <p className="text-gray-700 text-center">{category.description}</p>
           </div>
         ))}
