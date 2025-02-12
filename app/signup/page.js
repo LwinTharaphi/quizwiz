@@ -11,20 +11,39 @@ export default function Signup() {
   const [userType, setUserType] = useState("");
   const router = useRouter();
 
-  const handleSignup = () => {
-    if (!username || !email || !password || !confirmPassword) {
+  const handleSignup = async () => {
+    if (!username || !email || !password || !confirmPassword || !userType) {
       alert("Please fill in all fields.");
       return;
     }
-
+  
     if (password !== confirmPassword) {
       alert("Passwords do not match.");
       return;
     }
-
-    alert("Signup successful!");
-    router.push("/");
-  };
+  
+    try {
+      const response = await fetch("http://localhost:5000/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, email, password, userType }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        alert("Signup successful!");
+        router.push("/");
+      } else {
+        alert(`Signup failed: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("An error occurred. Please try again.");
+    }
+  };  
 
   return (
     <div className="flex min-h-screen">

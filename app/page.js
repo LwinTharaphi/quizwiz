@@ -10,17 +10,39 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  const handleLogin = () => {
-    if (username === "quizwiz" && email === "quizwiz@gmail.com" && password === "12345") {
-      if (userType === "player") {
-        router.push("/player/categories");
-      } else if (userType === "creator") {
-        router.push("/creator/creator-dashboard");
+  const handleLogin = async () => {
+    if (username === "" || email === "" || password === "") {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    try {
+      // Send login request to the backend
+      const response = await fetch("http://localhost:5000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, email, password, userType }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Redirect based on user type
+        if (userType === "player") {
+          router.push("/player/categories");
+        } else if (userType === "creator") {
+          router.push("/creator/creator-dashboard");
+        } else {
+          alert("Please select a valid user type.");
+        }
       } else {
-        alert("Please select a user type");
+        alert(`Login failed: ${data.error}`);
       }
-    } else {
-      alert("Invalid username, email, or password");
+    } catch (error) {
+      console.error("Error:", error);
+      alert("An error occurred. Please try again.");
     }
   };
 
