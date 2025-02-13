@@ -1,30 +1,125 @@
-"use client";
+"use client";  // Ensures that this is a client-side component
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";  // Import usePathname from next/navigation
+import { useRouter } from 'next/navigation';
 
 const ReviewPage = () => {
   const router = useRouter();
+  const pathname = usePathname();  // Get the current path
+  const categoryId = pathname?.split('/')[3];  // Extract the category ID from the URL
   const [questions, setQuestions] = useState([]);
   const [title, setTitle] = useState("");
+  const [creatorId, setCreatorId] = useState(""); // Will be set from creator login
+  const [categories, setCategories] = useState([]); // Will hold categories data from backend
 
   useEffect(() => {
-    // Retrieve questions from localStorage
+    // Step 1: Retrieve questions from localStorage
     const savedQuestions = localStorage.getItem("questions");
     if (savedQuestions) {
-      setQuestions(JSON.parse(savedQuestions)); // Parse the JSON string to get the array
+      const parsedQuestions = JSON.parse(savedQuestions);
+      console.log(parsedQuestions); // Log the parsed questions to inspect their structure
+      setQuestions(parsedQuestions);
     }
-  }, []); // Runs only once when the component mounts
 
-  const handlePost = () => {
-    if (title) {
-      alert("Quiz Created Successfully! We will review your quiz and publish it soon.");
-      localStorage.removeItem("questions"); // Clear the questions after posting
-      router.push("/creator/creator-dashboard"); // Redirect to the home page
+    // Step 2: Get creatorId from localStorage or global state
+    const savedCreatorId = localStorage.getItem("creatorId");
+    if (savedCreatorId) {
+      setCreatorId(savedCreatorId);
+    }
+
+    // Step 3: Fetch categories list from backend
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/categories");
+        const categoriesData = await response.json();
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []); // Runs on mount to fetch data
+
+  const handlePost = async () => {
+    console.log("title:", title);
+    console.log("categoryId:", categoryId);
+    console.log("creatorId:", creatorId);
+
+    if (title && categoryId && creatorId) {
+      const quizData = {
+        title,
+        categoryId,
+        creatorId,
+        adminId: 1,
+        submittedDate: new Date().toISOString(),
+      };
+
+      try {
+        // Step 1: Create Quiz
+        const quizResponse = await fetch("http://localhost:5000/createQuiz", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(quizData),
+        });
+
+        const quizResult = await quizResponse.json();
+        console.log("Quiz creation response:", quizResult);
+
+        if (quizResult.success && quizResult.quizId) {
+          const quizId = quizResult.quizId;
+          if (!quizId) {
+            console.error("Quiz ID is missing!");
+            alert("Error: Quiz ID is missing.");
+            return;
+          }
+
+          const questionData = questions.map((question) => ({
+            quizId,
+            questionText: question.text,
+            correctAnswer: question.correct,
+            option1: question.option1,
+            option2: question.option2,
+            option3: question.option3,
+            option4: question.option4,
+          }));
+
+          console.log("Sending question data:", questionData);
+
+          // Step 3: Add Questions
+          const questionsResponse = await fetch("http://localhost:5000/addQuestions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ questions: questionData }),
+          });
+
+          const questionsResult = await questionsResponse.json();
+          console.log("Questions API response:", questionsResult);
+
+          if (questionsResult.success) {
+            alert("Quiz Created Successfully! We will review your quiz and publish it soon.");
+            localStorage.removeItem("questions");
+            router.push("/creator/creator-dashboard");
+          } else {
+            alert(`Failed to add questions: ${questionsResult.message}`);
+            localStorage.removeItem("questions");
+          }
+        } else {
+          alert("Failed to create quiz. Please try again.");
+          localStorage.removeItem("questions");
+        }
+      } catch (error) {
+        console.error("Error posting quiz:", error);
+        alert("An error occurred while creating the quiz.");
+        localStorage.removeItem("questions");
+      }
     } else {
-      alert("Please provide a quiz title.");
+      alert("Please provide a quiz title, category, and creator.");
     }
   };
+
+
 
   return (
     <div style={styles.container}>
@@ -43,7 +138,7 @@ const ReviewPage = () => {
               <div style={styles.questionBox}>
                 <h3>{question.text}</h3>
                 <div style={styles.choicesContainer}>
-                  {question.choices.map((choice, idx) => (
+                  {[question.option1, question.option2, question.option3, question.option4].map((choice, idx) => (
                     <div
                       key={idx}
                       style={{
@@ -73,6 +168,7 @@ const ReviewPage = () => {
         ) : (
           <p>No questions available.</p>
         )}
+
       </ul>
       <button onClick={handlePost} style={styles.postButton}>
         Post Quiz

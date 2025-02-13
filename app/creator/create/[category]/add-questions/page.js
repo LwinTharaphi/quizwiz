@@ -17,9 +17,14 @@ const AddQuestionsPage = () => {
   const [questions, setQuestions] = useState([]); // Initialize as an empty array
   const [currentQuestion, setCurrentQuestion] = useState({
     text: "",
-    choices: ["", "", "", ""],
     correct: "",
+    option1: "",
+    option2: "",
+    option3: "",
+    option4: "",
   });
+
+  console.log("Category ID:", category);
 
   // Load questions from localStorage on component mount
   useState(() => {
@@ -32,13 +37,24 @@ const AddQuestionsPage = () => {
   const handleAddMore = () => {
     if (
       currentQuestion.text &&
-      currentQuestion.choices.every((choice) => choice) &&
-      currentQuestion.correct
+      currentQuestion.correct &&
+      currentQuestion.option1 &&
+      currentQuestion.option2 &&
+      currentQuestion.option3 &&
+      currentQuestion.option4
     ) {
       const updatedQuestions = [...questions, currentQuestion];
       setQuestions(updatedQuestions);
       localStorage.setItem("questions", JSON.stringify(updatedQuestions)); // Save to localStorage
-      setCurrentQuestion({ text: "", choices: ["", "", "", ""], correct: "" });
+  
+      setCurrentQuestion({
+        text: "",
+        option1: "",
+        option2: "",
+        option3: "",
+        option4: "",
+        correct: "",
+      });
     } else {
       alert("Please fill in all fields.");
     }
@@ -61,7 +77,7 @@ const AddQuestionsPage = () => {
         style={styles.textBox}
       />
       <div style={styles.choicesContainer}>
-        {currentQuestion.choices.map((choice, index) => {
+        {["option1", "option2", "option3", "option4"].map((optionKey, index) => {
           // Get a random color for each card
           const randomColor = paleColors[Math.floor(Math.random() * paleColors.length)];
 
@@ -70,11 +86,12 @@ const AddQuestionsPage = () => {
               <input
                 type="text"
                 placeholder={`Option ${index + 1}`}
-                value={choice}
+                value={currentQuestion[optionKey]}
                 onChange={(e) => {
-                  const updatedChoices = [...currentQuestion.choices];
-                  updatedChoices[index] = e.target.value;
-                  setCurrentQuestion({ ...currentQuestion, choices: updatedChoices });
+                  setCurrentQuestion({
+                    ...currentQuestion,
+                    [optionKey]: e.target.value
+                  });
                 }}
                 style={styles.choiceInput}
               />
@@ -92,13 +109,13 @@ const AddQuestionsPage = () => {
         <option value="" disabled>
           Select Correct Answer
         </option>
-        {currentQuestion.choices.map((choice, index) => (
+        {[currentQuestion.option1, currentQuestion.option2, currentQuestion.option3, currentQuestion.option4].map((choice, index) => (
           <option key={index} value={choice}>
             {choice}
           </option>
         ))}
       </select>
-      <div style={styles.buttonsContainer}>       
+      <div style={styles.buttonsContainer}>
         <button onClick={handleFinish} style={styles.finishButton}>
           Finish
         </button>
@@ -114,11 +131,11 @@ const styles = {
   container: {
     padding: "20px",
     fontFamily: "Arial, sans-serif",
-    display: "flex", // Use flexbox for centering
-    flexDirection: "column", // Stack items vertically
-    alignItems: "center", // Center horizontally
-    justifyContent: "center", // Center vertically if needed
-    height: "100vh", // Full height of the viewport
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100vh",
   },
   title: {
     fontSize: "24px",
@@ -127,34 +144,34 @@ const styles = {
     textAlign: "center",
   },
   textBox: {
-    width: "60%", // Adjust width as needed
+    width: "60%",
     height: "400px",
     padding: "10px",
     marginBottom: "20px",
     borderRadius: "5px",
     border: "1px solid #ddd",
-    fontSize: "16px", 
+    fontSize: "16px",
   },
   choicesContainer: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr", // Two cards in a row
+    gridTemplateColumns: "1fr 1fr",
     gap: "20px",
     marginBottom: "20px",
   },
   choiceCard: {
     height: "120px",
-    width: "70%", // Make the cards full width
+    width: "70%",
     marginLeft: "50px",
-    marginRight: "100px", 
+    marginRight: "100px",
     padding: "10px",
     borderRadius: "5px",
     boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
     display: "flex",
-    alignItems: "center", // Center vertically
-    justifyContent: "center", // Center horizontally
+    alignItems: "center",
+    justifyContent: "center",
   },
   choiceInput: {
-    width: "60%", // Center the input within the card
+    width: "60%",
     padding: "10px",
     fontSize: "16px",
     border: "1px solid #ddd",
@@ -171,8 +188,8 @@ const styles = {
   buttonsContainer: {
     display: "flex",
     justifyContent: "space-between",
-    gap: "10px", // Add a gap between the buttons
-  },  
+    gap: "10px",
+  },
   addMoreButton: {
     padding: "10px 20px",
     fontSize: "16px",
@@ -192,6 +209,5 @@ const styles = {
     cursor: "pointer",
   },
 };
-
 
 export default AddQuestionsPage;

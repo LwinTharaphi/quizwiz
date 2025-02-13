@@ -33,7 +33,13 @@ export default function Login() {
         if (userType === "player") {
           router.push("/player/categories");
         } else if (userType === "creator") {
-          router.push("/creator/creator-dashboard");
+          // Ensure the backend sends creator_id in the response
+          if (data.creator_id) {
+            localStorage.setItem("creatorId", data.creator_id); // Store creatorId
+            router.push("/creator/creator-dashboard");
+          } else {
+            alert("Creator ID not found in the response.");
+          }
         } else {
           alert("Please select a valid user type.");
         }

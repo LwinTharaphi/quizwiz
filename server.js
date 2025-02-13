@@ -62,13 +62,13 @@ app.post("/login", async (req, res) => {
     let query;
     let values = [username, email];
 
-    // Determine the table based on userType
+    // Determine the table and ID field based on userType
     if (userType === "creator") {
       query = `
-        SELECT * FROM creator WHERE username = $1 AND email = $2`;
+        SELECT creator_id, password FROM creator WHERE username = $1 AND email = $2`;
     } else if (userType === "player") {
       query = `
-        SELECT * FROM player WHERE username = $1 AND email = $2`;
+        SELECT player_id, password FROM player WHERE username = $1 AND email = $2`;
     } else {
       return res.status(400).json({ error: "Invalid user type" });
     }
@@ -78,16 +78,91 @@ app.post("/login", async (req, res) => {
     const user = result.rows[0];
 
     if (user && user.password === password) {
-      return res.status(200).json({ message: "Login successful", user });
+      // Include the appropriate ID in the response
+      const responseData = {
+        message: "Login successful",
+        user: {
+          username,
+          email,
+        },
+      };
+
+      if (userType === "creator") {
+        responseData.creator_id = user.creator_id;
+      } else if (userType === "player") {
+        responseData.player_id = user.player_id;
+      }
+
+      return res.status(200).json(responseData);
     } else {
       return res.status(401).json({ error: "Invalid username, email, or password" });
     }
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
 });
+
+
+app.post('/addQuestions', async (req, res) => {
+  const { questions } = req.body;
+
+  try {
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      return res.json({ success: false, message: "No questions provided." });
+    }
+
+    for (let question of questions) {
+      const { quizId, questionText, correctAnswer, option1, option2, option3, option4 } = question;
+
+      // Ensure `quizId` and all required fields are present
+      if (!quizId || !questionText || !correctAnswer || !option1 || !option2 || !option3 || !option4) {
+        return res.json({ success: false, message: "Missing required fields in a question." });
+      }
+
+      const questionQuery = `
+        INSERT INTO Question 
+        (quiz_id, question_text, correct_ans, option1, option2, option3, option4) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `;
+
+      // Insert question into the database
+      await pool.query(questionQuery, [
+        quizId, 
+        questionText, 
+        correctAnswer, 
+        option1, 
+        option2, 
+        option3, 
+        option4
+      ]);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Database error adding questions:", error);
+    res.status(500).json({ success: false, message: "Database error: " + error.message });
+  }
+});
+
+
+
+
+app.post('/createQuiz', async (req, res) => {
+  const { title, categoryId, creatorId, adminId, submittedDate } = req.body;
+
+  try {
+    const quizQuery = 'INSERT INTO Quiz (quiz_title, category_id, creator_id, admin_id, submitted_date) VALUES ($1, $2, $3, $4, $5) RETURNING quiz_id';
+    const quizResult = await pool.query(quizQuery, [title, categoryId, creatorId, adminId, submittedDate]);
+    
+    const quizId = quizResult.rows[0].quiz_id; // Get the newly created quiz_id
+    res.json({ success: true, quizId });
+  } catch (error) {
+    console.error("Error creating quiz:", error);
+    res.json({ success: false, message: "Error creating quiz" });
+  }
+});
+
 
 // Endpoint to fetch categories
 app.get('/categories', async (req, res) => {

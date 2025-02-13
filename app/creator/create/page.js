@@ -1,19 +1,24 @@
 "use client";
-import React, { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import axios from 'axios';
+import { useRouter } from "next/navigation";
 
 const CreatePage = () => {
-    const { category } = useParams(); 
     const router = useRouter();
+    const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState("");
 
-    const categories = [
-        "Science",
-        "History",
-        "Mathematics",
-        "Literature",
-        "Technology",
-    ]; // Example categories
+    useEffect(() => {
+        // Fetch categories from the backend
+        axios.get('http://localhost:5000/categories')
+            .then((response) => {
+                setCategories(response.data);
+            })
+            .catch((error) => {
+                console.error('Error fetching categories:', error);
+                alert('Failed to load categories. Please try again later.');
+            });
+    }, []);
 
     const handleCategoryChange = (event) => {
         setSelectedCategory(event.target.value);
@@ -21,7 +26,7 @@ const CreatePage = () => {
 
     const handleNext = () => {
         if (selectedCategory) {
-            // Navigate to the next step or process the category selection
+            // Navigate to the next step with the selected category
             router.push(`/creator/create/${selectedCategory}/add-questions`);
         } else {
             alert("Please select a category.");
@@ -47,9 +52,9 @@ const CreatePage = () => {
                         <option value="" disabled>
                             Select a Category
                         </option>
-                        {categories.map((category, index) => (
-                            <option key={index} value={category}>
-                                {category}
+                        {categories.map((category) => (
+                            <option key={category.category_id} value={category.category_id}>
+                                {category.category_title}
                             </option>
                         ))}
                     </select>
