@@ -5,14 +5,13 @@ import { FaTimes } from "react-icons/fa"; // For the cross icon
 export default function PlayerHistory() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [playerId,setplayerId] = useState("");
+  const [playerId, setPlayerId] = useState("");
 
   useEffect(() => {
     const playerId = localStorage.getItem("playerId");
     if (playerId) {
-      setplayerId(playerId);
-    }
-    if (!playerId) {
+      setPlayerId(playerId);
+    } else {
       console.error("Player ID not found in localStorage");
       setLoading(false);
       return;
@@ -37,14 +36,45 @@ export default function PlayerHistory() {
     fetchPlayerHistory();
   }, [playerId]);
 
-  // Function to delete a record locally
-  const handleDelete = (index) => {
-    setHistory(history.filter((_, i) => i !== index));
+  // Function to delete a single record
+  const handleDelete = async (scoreId) => {
+    console.log("Deleting record with score_id:", scoreId); // Debugging
+    try {
+      const response = await fetch(
+        `http://localhost:5000/clear-single-record?score_id=${scoreId}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (response.ok) {
+        console.log("Record deleted successfully"); // Debugging
+        setHistory(history.filter((item) => item.score_id !== scoreId));
+      } else {
+        console.error("Failed to delete record");
+      }
+    } catch (error) {
+      console.error("Error deleting record:", error);
+    }
   };
 
-  // Function to clear all records
-  const handleClearAll = () => {
-    setHistory([]);
+  // Function to delete all records for a player
+  const handleClearAll = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/clear-all-records?player_id=${playerId}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (response.ok) {
+        // Clear the local state
+        setHistory([]);
+      } else {
+        console.error("Failed to delete all records");
+      }
+    } catch (error) {
+      console.error("Error clearing all records:", error);
+    }
   };
 
   return (
@@ -100,7 +130,7 @@ export default function PlayerHistory() {
                 </span>
               </div>
               <button
-                onClick={() => handleDelete(index)}
+                onClick={() => handleDelete(item.score_id)} // Pass the correct score_id
                 className="text-red-500 hover:text-red-700"
               >
                 <FaTimes size={20} />

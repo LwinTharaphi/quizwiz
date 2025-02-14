@@ -165,7 +165,7 @@ app.post('/save-score', async (req, res) => {
   const { totalScore, quizId, playerId } = req.body; // Get playerId from frontend request body
   
   // Validate input
-  if (!totalScore || !quizId || !playerId) {
+  if (totalScore === null || totalScore === undefined || quizId === undefined || playerId === undefined) {
     return res.status(400).json({ success: false, message: "Missing required data." });
   }
 
@@ -195,7 +195,7 @@ app.post('/save-score', async (req, res) => {
 app.put('/update-score', async (req, res) => {
   const { totalScore, quizId, playerId } = req.body;
 
-  if (!totalScore || !quizId || !playerId) {
+  if (totalScore === null || totalScore === undefined || quizId === undefined || playerId === undefined) {
     return res.status(400).json({ success: false, message: "Missing required data." });
   }
 
@@ -304,7 +304,7 @@ app.get("/player-history", async (req, res) => {
   
   try {
     const query = `
-      SELECT s.total_score, s.score_date, q.quiz_title 
+      SELECT s.total_score, s.score_date, q.quiz_title, s.score_id
       FROM scorerecord s
       JOIN quiz q ON s.quiz_id = q.quiz_id
       WHERE s.player_id = $1
@@ -318,6 +318,37 @@ app.get("/player-history", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+app.delete("/clear-single-record", async (req, res) => {
+  const { score_id } = req.query; // Use req.query for query parameters
+  console.log("Deleting record with score_id:", score_id); // Debugging
+  try {
+    const query = "DELETE FROM scorerecord WHERE score_id = $1";
+    const result = await pool.query(query, [score_id]);
+    console.log("Delete query result:", result.rowCount); // Debugging
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Record not found" });
+    }
+    res.status(200).json({ message: "Record deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting record:", error);
+    res.status(500).json({ error: "Failed to delete record" });
+  }
+});
+
+app.delete("/clear-all-records", async (req, res) => {
+  const { player_id } = req.query;
+  try {
+    const query = "DELETE FROM scorerecord WHERE player_id = $1";
+    await pool.query(query, [player_id]);
+    res.status(200).json({ message: "All records deleted successfully" });
+  } catch (error) {
+    console.error("Error clearing records:", error);
+    res.status(500).json({ error: "Failed to clear all records" });
+  }
+});
+
+
 
 
 const PORT = 5000;

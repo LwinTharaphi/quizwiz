@@ -8,9 +8,7 @@ const SubmissionPage = () => {
   const searchParams = useSearchParams();
   const score = searchParams.get("score");
   const totalQuestions = searchParams.get("totalQuestions");
-
-  // Convert playerId and quizSetId to numbers
-  const playerId = Number(localStorage.getItem("playerId"));
+  const [playerId, setPlayerId] = useState("");
   const quizId = Number(quizSetId);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,6 +16,14 @@ const SubmissionPage = () => {
   const hasSubmitted = useRef(false); // Track if the score has been submitted
 
   useEffect(() => {
+    const playerId = localStorage.getItem("playerId");
+    if (playerId) {
+      setPlayerId(playerId);
+    } else {
+      console.error("Player ID not found in localStorage");
+      setLoading(false);
+      return;
+    }
     if (score !== null && playerId && quizId && !hasSubmitted.current) {
       hasSubmitted.current = true; // Mark as submitted to prevent duplicates
 
