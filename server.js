@@ -146,8 +146,6 @@ app.post('/addQuestions', async (req, res) => {
 });
 
 
-
-
 app.post('/createQuiz', async (req, res) => {
   const { title, categoryId, creatorId, adminId, submittedDate } = req.body;
 
@@ -160,6 +158,89 @@ app.post('/createQuiz', async (req, res) => {
   } catch (error) {
     console.error("Error creating quiz:", error);
     res.json({ success: false, message: "Error creating quiz" });
+  }
+});
+
+app.post('/save-score', async (req, res) => {
+  const { totalScore, quizId, playerId } = req.body; // Get playerId from frontend request body
+  
+  // Validate input
+  if (!totalScore || !quizId || !playerId) {
+    return res.status(400).json({ success: false, message: "Missing required data." });
+  }
+
+  const scoreDate = new Date(); // Current date and time for the score
+
+  try {
+    // Insert the score into the database (no need to handle score_id as it's auto-incremented)
+    const insertQuery = `
+      INSERT INTO scorerecord (total_score, score_date, quiz_id, player_id) 
+      VALUES ($1, $2, $3, $4)
+    `;
+
+    await pool.query(insertQuery, [
+      totalScore,
+      scoreDate,
+      quizId,
+      playerId
+    ]);
+
+    res.json({ success: true, message: "Score saved successfully." });
+  } catch (error) {
+    console.error("Error saving score:", error);
+    res.status(500).json({ success: false, message: "Error saving score." });
+  }
+});
+
+app.put('/update-score', async (req, res) => {
+  const { totalScore, quizId, playerId } = req.body;
+
+  if (!totalScore || !quizId || !playerId) {
+    return res.status(400).json({ success: false, message: "Missing required data." });
+  }
+
+  try {
+    const updateQuery = `
+      UPDATE scorerecord 
+      SET total_score = $1, score_date = $2 
+      WHERE quiz_id = $3 AND player_id = $4;
+    `;
+
+    const result = await pool.query(updateQuery, [totalScore, new Date(), quizId, playerId]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "No existing record found to update." });
+    }
+
+    res.json({ success: true, message: "Score updated successfully." });
+  } catch (error) {
+    console.error("Error updating score:", error);
+    res.status(500).json({ success: false, message: "Error updating score." });
+  }
+});
+
+app.get("/check-score", async (req, res) => {
+  const { playerId, quizId } = req.query;
+
+  if (!playerId || !quizId) {
+    return res.status(400).json({ success: false, message: "Missing playerId or quizId." });
+  }
+
+  try {
+    const checkQuery = `
+      SELECT EXISTS (
+        SELECT 1 FROM scorerecord 
+        WHERE player_id = $1 AND quiz_id = $2
+      );
+    `;
+
+    const result = await pool.query(checkQuery, [playerId, quizId]);
+    const exists = result.rows[0].exists;
+
+    res.json({ success: true, exists });
+  } catch (error) {
+    console.error("Error checking score record:", error);
+    res.status(500).json({ success: false, message: "Error checking score record." });
   }
 });
 
@@ -217,6 +298,27 @@ app.get("/questions", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+app.get("/player-history", async (req, res) => {
+  const { player_id } = req.query;
+  
+  try {
+    const query = `
+      SELECT s.total_score, s.score_date, q.quiz_title 
+      FROM scorerecord s
+      JOIN quiz q ON s.quiz_id = q.quiz_id
+      WHERE s.player_id = $1
+      ORDER BY s.score_date DESC;
+    `;
+
+    const result = await pool.query(query, [player_id]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching player scores:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

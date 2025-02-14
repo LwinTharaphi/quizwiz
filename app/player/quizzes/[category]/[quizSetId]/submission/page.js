@@ -1,6 +1,6 @@
 "use client";
-import React from "react";
-import { useSearchParams, useRouter, useParams } from "next/navigation"; // To access the query params
+import React, { useEffect, useState, useRef } from "react";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
 
 const SubmissionPage = () => {
   const { category, quizSetId } = useParams();
@@ -9,14 +9,77 @@ const SubmissionPage = () => {
   const score = searchParams.get("score");
   const totalQuestions = searchParams.get("totalQuestions");
 
+  // Convert playerId and quizSetId to numbers
+  const playerId = Number(localStorage.getItem("playerId"));
+  const quizId = Number(quizSetId);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState(null); // To store response messages
+  const hasSubmitted = useRef(false); // Track if the score has been submitted
+
+  useEffect(() => {
+    if (score !== null && playerId && quizId && !hasSubmitted.current) {
+      hasSubmitted.current = true; // Mark as submitted to prevent duplicates
+
+      const submitOrUpdateScore = async () => {
+        setIsSubmitting(true);
+        try {
+          const requestData = {
+            totalScore: Number(score), // Convert score to a number
+            quizId,
+            playerId,
+          };
+
+          console.log("Submitting or updating score with data:", requestData);
+
+          // First, check if a record already exists for this player and quiz
+          const checkResponse = await fetch(
+            `http://localhost:5000/check-score?playerId=${playerId}&quizId=${quizId}`
+          );
+
+          if (!checkResponse.ok) {
+            throw new Error("Failed to check existing score record.");
+          }
+
+          const checkData = await checkResponse.json();
+          const recordExists = checkData.exists;
+
+          // If a record exists, update it; otherwise, create a new one
+          const endpoint = recordExists ? "/update-score" : "/save-score";
+          const method = recordExists ? "PUT" : "POST";
+
+          const scoreResponse = await fetch(`http://localhost:5000${endpoint}`, {
+            method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestData),
+          });
+
+          if (!scoreResponse.ok) {
+            const errorResponse = await scoreResponse.json();
+            throw new Error(errorResponse.message || "Failed to process score.");
+          }
+
+          const responseData = await scoreResponse.json();
+          console.log("Score processed successfully:", responseData);
+          setSubmissionStatus(responseData.message); // Update UI with the success message
+        } catch (error) {
+          console.error("Error processing score:", error);
+          setSubmissionStatus("Failed to process score. Please try again.");
+        } finally {
+          setIsSubmitting(false);
+        }
+      };
+
+      submitOrUpdateScore();
+    }
+  }, [playerId, quizId, score]);
+
   const handleSeeAnswers = () => {
-    // Logic for seeing the answers
-    router.push(`/player/quizzes/category/${quizSetId}/answers`);
+    router.push(`/player/quizzes/category/${quizId}/answers`);
   };
 
   const handleRetakeQuiz = () => {
-    // Logic for retaking the quiz
-    router.push(`/player/quizzes/${category}/${quizSetId}`);
+    router.push(`/player/quizzes/${category}/${quizId}`);
   };
 
   return (
@@ -40,6 +103,13 @@ const SubmissionPage = () => {
           Your score is {score} out of {totalQuestions}.
         </p>
 
+        {/* Submission Status */}
+        {submissionStatus && (
+          <p className={`text-lg mb-4 ${isSubmitting ? "text-gray-500" : "text-green-500"}`}>
+            {submissionStatus}
+          </p>
+        )}
+
         {/* Buttons */}
         <div className="flex justify-center gap-4">
           <button
@@ -55,6 +125,11 @@ const SubmissionPage = () => {
             Retake Quiz
           </button>
         </div>
+
+        {/* If submitting */}
+        {isSubmitting && (
+          <div className="mt-4 text-lg text-gray-500">Processing your score...</div>
+        )}
       </div>
     </div>
   );
