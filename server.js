@@ -319,6 +319,43 @@ app.get("/player-history", async (req, res) => {
   }
 });
 
+app.get("/creator-created-quiz", async (req, res) => {
+  const { creator_id } = req.query;
+  
+  try {
+    const query = `
+      SELECT q.quiz_id, q.quiz_title, c.category_title
+      FROM quiz q
+      JOIN category c ON q.category_id = c.category_id
+      WHERE q.creator_id = $1
+    `;
+
+    const result = await pool.query(query, [creator_id]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching quizzes:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.delete("/clear-quiz", async (req, res) => {
+  const { quiz_id } = req.query; // Use req.query for query parameters
+  console.log("Deleting quiz with quiz_id:", quiz_id); // Debugging
+  try {
+    const query = "DELETE FROM quiz WHERE quiz_id = $1";
+    const result = await pool.query(query, [quiz_id]);
+    console.log("Delete query result:", result.rowCount); // Debugging
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Quiz not found" });
+    }
+    res.status(200).json({ message: "Quiz deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting record:", error);
+    res.status(500).json({ error: "Failed to delete quiz" });
+  }
+});
+
+
 app.delete("/clear-single-record", async (req, res) => {
   const { score_id } = req.query; // Use req.query for query parameters
   console.log("Deleting record with score_id:", score_id); // Debugging
@@ -348,6 +385,30 @@ app.delete("/clear-all-records", async (req, res) => {
   }
 });
 
+
+//For Admin
+app.get("/all-users", async (req, res) => {
+  try {
+    // SQL query to get all creators and players as separate sets, then combine them using UNION
+    const query = `
+      SELECT username, email, type, creator_id as id
+      FROM creator
+      UNION
+      SELECT username, email, type, player_id as id
+      FROM player
+    `;
+    const result = await pool.query(query);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No users found." });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: "Failed to fetch users." });
+  }
+});
 
 
 

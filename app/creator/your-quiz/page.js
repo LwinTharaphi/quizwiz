@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes } from "@fortawesome/free-solid-svg-icons";
@@ -7,19 +7,64 @@ import { faUserCircle } from "@fortawesome/free-solid-svg-icons"; // Profile ico
 
 const YourQuiz = () => {
     const router = useRouter();
-    // Constant quizzes data
-    const [quizzes, setQuizzes] = useState([
-        { id: 1, name: "Science Basics", category: "Science" },
-        { id: 2, name: "History 101", category: "History" },
-        { id: 3, name: "Math Trivia", category: "Mathematics" },
-    ]);
-
-    // Profile dropdown state
+    const [quizzes, setQuizzes] = useState([]);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [creatorId, setCreatorId] = useState("");
+
+    // Fetch quizzes data when the component mounts
+    useEffect(() => {
+        const creatorId = localStorage.getItem("creatorId");
+        if (creatorId) {
+            setCreatorId(creatorId);
+        } else {
+            console.error("Creator ID not found in localStorage");
+            setLoading(false);
+            return;
+        }
+        if (!creatorId) {
+            setError("No creator ID found.");
+            setLoading(false);
+            return;
+        }
+
+        const fetchQuizzes = async () => {
+            try {
+                const response = await fetch(`http://localhost:5000/creator-created-quiz?creator_id=${creatorId}`);
+                const data = await response.json();
+                if (response.ok) {
+                    setQuizzes(data);
+                } else {
+                    setError("Failed to fetch quizzes.");
+                }
+            } catch (err) {
+                setError("An error occurred while fetching quizzes.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchQuizzes();
+    }, [creatorId]);
 
     // Handle removing a quiz
-    const handleRemoveQuiz = (id) => {
-        setQuizzes((prevQuizzes) => prevQuizzes.filter((quiz) => quiz.id !== id));
+    const handleRemoveQuiz = async (quiz_id) => {
+        try {
+            // Send a DELETE request to your backend
+            const response = await fetch(`http://localhost:5000/clear-quiz?quiz_id=${quiz_id}`, {
+                method: 'DELETE',
+            });
+            if (response.ok) {
+                setQuizzes((prevQuizzes) => prevQuizzes.filter((quiz) => quiz.quiz_id !== quiz_id));
+            } else {
+                // Handle error if quiz deletion fails
+                alert("Failed to delete quiz");
+            }
+        } catch (err) {
+            console.error("Error deleting quiz:", err);
+            alert("An error occurred while deleting the quiz.");
+        }
     };
 
     // Handle navigation (or actions) from the dropdown
@@ -70,16 +115,21 @@ const YourQuiz = () => {
             {/* Left Side: Recently Created Quizzes */}
             <div style={styles.leftPane}>
                 <h3 style={styles.heading}>Your Quizzes</h3>
+                {loading && <p>Loading quizzes...</p>}
+                {error && <p style={{ color: "red" }}>{error}</p>}
+                {!loading && !error && quizzes.length === 0 && (
+                    <p>No quizzes available.</p>
+                )}
                 <ul style={styles.quizList}>
                     {quizzes.map((quiz) => (
-                        <li key={quiz.id} style={styles.quizItem}>
-                            <span style={styles.quizName}>{quiz.name}</span>
+                        <li key={quiz.quiz_id} style={styles.quizItem}>
+                            <span style={styles.quizName}>{quiz.quiz_title}</span>
                             <br />
-                            <span style={styles.quizCategory}>{quiz.category}</span>
+                            <span style={styles.quizCategory}>{quiz.category_title}</span>
                             <FontAwesomeIcon
                                 icon={faTimes}
                                 style={styles.removeIcon}
-                                onClick={() => handleRemoveQuiz(quiz.id)}
+                                onClick={() => handleRemoveQuiz(quiz.quiz_id)}
                             />
                         </li>
                     ))}
