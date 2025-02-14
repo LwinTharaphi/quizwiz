@@ -31,7 +31,12 @@ export default function Login() {
       if (response.ok) {
         // Redirect based on user type
         if (userType === "player") {
-          router.push("/player/categories");
+          if (data.player_id) {
+            localStorage.setItem("playerId", data.player_id); // Store playerId
+            router.push("/player/categories");
+          } else {
+            alert("Player ID not found in the response.");
+          }
         } else if (userType === "creator") {
           // Ensure the backend sends creator_id in the response
           if (data.creator_id) {
@@ -43,7 +48,8 @@ export default function Login() {
         } else {
           alert("Please select a valid user type.");
         }
-      } else {
+      }
+      else {
         alert(`Login failed: ${data.error}`);
       }
     } catch (error) {

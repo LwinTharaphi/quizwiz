@@ -180,7 +180,7 @@ app.get('/categories', async (req, res) => {
 app.get('/quizsets', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT quiz.quiz_title, category.category_title 
+      `SELECT quiz.quiz_title, category.category_title , quiz.quiz_id
        FROM quiz
        JOIN category ON quiz.category_id = category.category_id`
     );
@@ -188,6 +188,33 @@ app.get('/quizsets', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Database query failed' });
+  }
+});
+
+app.get("/questions", async (req, res) => {
+  try {
+    const { quiz_id } = req.query; // Get quiz_id from query params
+
+    if (!quiz_id) {
+      return res.status(400).json({ error: "quiz_id is required" });
+    }
+
+    const query = `
+      SELECT question_id, question_text, correct_ans, option1, option2, option3, option4, quiz_id 
+      FROM question 
+      WHERE quiz_id = $1
+    `;
+
+    const result = await pool.query(query, [quiz_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No questions found for this quiz" });
+    }
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching questions:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

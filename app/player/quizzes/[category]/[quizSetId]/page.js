@@ -1,20 +1,7 @@
-"use client";
+"use client"
 import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation"; 
-
-const questions = [
-  { id: 1, question: "What does HTML stand for?", options: ["HyperText Markup Language", "Hyper Tool Markup Language", "Home Tool Markup Language", "HyperText Multi Language"], correctAnswer: "HyperText Markup Language" },
-  { id: 2, question: "What is the purpose of CSS?", options: ["Styling", "Functionality", "Structure", "Interaction"], correctAnswer: "Styling" },
-  { id: 3, question: "What does JavaScript do?", options: ["Manipulates the DOM", "Serves as a database", "Styles the page", "Handles user input"], correctAnswer: "Manipulates the DOM" },
-  { id: 4, question: "What does HTTP stand for?", options: ["HyperText Transfer Protocol", "HyperTool Transfer Protocol", "Hyper Transfer Text Protocol", "HyperText Translation Protocol"], correctAnswer: "HyperText Transfer Protocol" },
-  { id: 5, question: "What is the purpose of a database?", options: ["Store data", "Execute code", "Create websites", "Design graphics"], correctAnswer: "Store data" },
-  { id: 6, question: "Which of the following is a JavaScript framework?", options: ["React", "Django", "Spring", "Laravel"], correctAnswer: "React" },
-  { id: 7, question: "Which tag is used to link an external CSS file?", options: ["<link>", "<style>", "<script>", "<css>"], correctAnswer: "<link>" },
-  { id: 8, question: "Which language is used to structure web pages?", options: ["HTML", "CSS", "JavaScript", "Python"], correctAnswer: "HTML" },
-  { id: 9, question: "Which of the following is used to style a webpage?", options: ["CSS", "HTML", "JavaScript", "PHP"], correctAnswer: "CSS" },
-  { id: 10, question: "What is the purpose of the 'console.log' method in JavaScript?", options: ["Output data to the console", "Print data to the screen", "Store data in a file", "Create an alert"], correctAnswer: "Output data to the console" },
-];
-const totalTime = questions.length * 45;
+import { useParams, useRouter } from "next/navigation";
+import axios from "axios";
 
 const paleColors = [
   "#FDE2E4", "#E2F0CB", "#D7E3FC", "#FCE1E4", "#FFF4E6",
@@ -24,10 +11,30 @@ const paleColors = [
 const QuizSetPage = () => {
   const { category, quizSetId } = useParams();
   const router = useRouter();
+
+  const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [questionTime, setQuestionTime] = useState(45);
-  const [totalTimeLeft, setTotalTimeLeft] = useState(totalTime); // 90 seconds timer
+  const [totalTimeLeft, setTotalTimeLeft] = useState(0);
+
+  useEffect(() => {
+    if (!quizSetId || isNaN(quizSetId)) {
+      console.error("Invalid quizSetId:", quizSetId);
+      alert("Invalid quiz ID. Please try again.");
+      return;
+    }
+
+    axios.get(`http://localhost:5000/questions?quiz_id=${Number(quizSetId)}`)
+      .then((response) => {
+        setQuestions(response.data);
+        setTotalTimeLeft(response.data.length * 45); // Set total quiz time dynamically
+      })
+      .catch((error) => {
+        console.error("Error fetching questions:", error);
+        alert("Failed to load questions. Please try again later.");
+      });
+  }, [quizSetId]);
 
   useEffect(() => {
     if (questionTime === 0) {
@@ -38,10 +45,10 @@ const QuizSetPage = () => {
     }, 1000);
 
     return () => clearInterval(questionTimer);
-  }, [questionTime]);
+  }, [questionTime, currentQuestionIndex]);
 
   useEffect(() => {
-    if (totalTimeLeft === 0) {
+    if (totalTimeLeft === 0 && questions.length > 0) {
       handleSubmit();
     }
     const totalTimer = setInterval(() => {
@@ -49,7 +56,7 @@ const QuizSetPage = () => {
     }, 1000);
 
     return () => clearInterval(totalTimer);
-  }, [totalTimeLeft]);
+  }, [totalTimeLeft, questions.length]);
 
   const handleAnswerClick = (questionIndex, option) => {
     setSelectedAnswers((prevState) => ({
@@ -61,17 +68,25 @@ const QuizSetPage = () => {
   const handleNextClick = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setQuestionTime(45); // Reset timer for next question
     }
   };
 
   const handlePreviousClick = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
+      setQuestionTime(45); // Reset timer for previous question
     }
   };
 
   const handleSubmit = () => {
-    const score = Object.values(selectedAnswers).filter((answer, idx) => answer === questions[idx].correctAnswer).length;
+    let score = 0;
+    questions.forEach((question, idx) => {
+      if (selectedAnswers[idx] === question.correct_ans) {
+        score++;
+      }
+    });
+
     router.push(`/player/quizzes/category/${quizSetId}/submission?score=${score}&totalQuestions=${questions.length}`);
   };
 
@@ -80,6 +95,8 @@ const QuizSetPage = () => {
     const seconds = time % 60;
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
+
+  if (questions.length === 0) return <p className="text-center mt-10">Loading questions...</p>;
 
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -99,11 +116,11 @@ const QuizSetPage = () => {
         </div>
 
         {/* Question Text */}
-        <p className="text-xl font-semibold text-center mb-4">{currentQuestion.question}</p>
+        <p className="text-xl font-semibold text-center mb-4">{currentQuestion.question_text}</p>
 
         {/* Answer Options */}
         <div className="container mx-auto grid grid-cols-2 gap-4">
-          {currentQuestion.options.map((option, idx) => (
+          {[currentQuestion.option1, currentQuestion.option2, currentQuestion.option3, currentQuestion.option4].map((option, idx) => (
             <div
               key={idx}
               className={`p-4 border rounded-md cursor-pointer transition-colors duration-200 ease-in-out hover:bg-gray-200 

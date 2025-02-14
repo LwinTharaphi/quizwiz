@@ -68,7 +68,7 @@ export default function Quizzes() {
           >
             <h2 className="text-xl font-bold mb-4 text-center">{quiz.quiz_title}</h2>           
             <button
-              onClick={() => handleQuizClick(quiz.quiz_title)}
+              onClick={() => handleQuizClick(quiz.quiz_id)}
               className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
             >
               Take Quiz

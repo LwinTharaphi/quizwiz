@@ -1,21 +1,58 @@
 "use client";
-import React from "react";
-
-// Sample questions constant
-const questions = [
-  { question: "What does HTML stand for?", options: ["HyperText Markup Language", "Hyper Tool Markup Language", "Home Tool Markup Language", "HyperText Multi Language"], correctAnswer: "HyperText Markup Language" },
-  { question: "What is the purpose of CSS?", options: ["Styling", "Functionality", "Structure", "Interaction"], correctAnswer: "Styling" },
-  { question: "What does JavaScript do?", options: ["Manipulates the DOM", "Serves as a database", "Styles the page", "Handles user input"], correctAnswer: "Manipulates the DOM" },
-  { question: "What does HTTP stand for?", options: ["HyperText Transfer Protocol", "HyperTool Transfer Protocol", "Hyper Transfer Text Protocol", "HyperText Translation Protocol"], correctAnswer: "HyperText Transfer Protocol" },
-  { question: "What is the purpose of a database?", options: ["Store data", "Execute code", "Create websites", "Design graphics"], correctAnswer: "Store data" },
-  { question: "Which of the following is a JavaScript framework?", options: ["React", "Django", "Spring", "Laravel"], correctAnswer: "React" },
-  { question: "Which tag is used to link an external CSS file?", options: ["<link>", "<style>", "<script>", "<css>"], correctAnswer: "<link>" },
-  { question: "Which language is used to structure web pages?", options: ["HTML", "CSS", "JavaScript", "Python"], correctAnswer: "HTML" },
-  { question: "Which of the following is used to style a webpage?", options: ["CSS", "HTML", "JavaScript", "PHP"], correctAnswer: "CSS" },
-  { question: "What is the purpose of the 'console.log' method in JavaScript?", options: ["Output data to the console", "Print data to the screen", "Store data in a file", "Create an alert"], correctAnswer: "Output data to the console" },
-];
+import React, { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";  // Use usePathname from next/navigation
+import axios from "axios";
 
 const AnswersPage = () => {
+  const pathname = usePathname();  // Get the current pathname
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Extract quiz_id from the URL path
+  const quiz_id = pathname?.split('/')[4];  // Assuming the path is /player/quizzes/category/[quiz_id]/answers
+
+  // Fetch questions based on quiz_id from URL
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      if (!quiz_id) return;  // If quiz_id is not available yet, do nothing
+
+      try {
+        const response = await axios.get(`http://localhost:5000/questions?quiz_id=${quiz_id}`);
+        setQuestions(response.data);
+      } catch (err) {
+        setError(err.message || "Error fetching questions");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuestions();
+  }, [quiz_id]);
+
+  // If data is loading
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 py-10">
+        <div className="max-w-screen-lg mx-auto text-left">
+          <h1 className="text-4xl font-bold text-green-600 mb-8">Loading...</h1>
+        </div>
+      </div>
+    );
+  }
+  
+  // If an error occurs
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 py-10">
+        <div className="max-w-screen-lg mx-auto text-left">
+          <h1 className="text-4xl font-bold text-red-600 mb-8">Error: {error}</h1>
+        </div>
+      </div>
+    );
+  }
+
+  // Render the questions and answers
   return (
     <div className="min-h-screen bg-gray-100 py-10">
       <div className="max-w-screen-lg mx-auto text-left">
@@ -25,9 +62,13 @@ const AnswersPage = () => {
         {/* Questions and Answers */}
         <div className="space-y-6">
           {questions.map((item, index) => (
-            <div key={index} className="border-2 border-gray-300 p-4 rounded-md">
-              <p className="text-xl font-semibold mb-2">Question {index + 1}: {item.question}</p>
-              <p className="text-lg font-medium">Answer: {item.correctAnswer}</p>
+            <div key={item.question_id} className="border-2 border-gray-300 p-4 rounded-md">
+              <p className="text-xl font-semibold mb-2">
+                <strong>Question {index + 1}:</strong> {item.question_text}
+              </p>
+              <p className="text-lg font-medium">
+                <strong>Answer:</strong> {item.correct_ans}
+              </p>
             </div>
           ))}
         </div>
