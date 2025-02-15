@@ -15,8 +15,9 @@ const QuizSetPage = () => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [questionTime, setQuestionTime] = useState(45);
+  const [questionTime, setQuestionTime] = useState(0); // Initialize to 0
   const [totalTimeLeft, setTotalTimeLeft] = useState(0);
+  const [quizTitle, setQuizTitle] = useState("");
 
   useEffect(() => {
     if (!quizSetId || isNaN(quizSetId)) {
@@ -25,10 +26,28 @@ const QuizSetPage = () => {
       return;
     }
 
+    // Fetch quiz set data to get allowed_time and quiz title
+    axios.get(`http://localhost:5000/quizsets`)
+      .then((response) => {
+        const quizSet = response.data.find(quiz => quiz.quiz_id === parseInt(quizSetId));
+        if (quizSet) {
+          setQuizTitle(quizSet.quiz_title); // Set the quiz title
+          const allowedTime = parseInt(quizSet.allowed_time, 10); // Parse allowed_time as an integer
+          setQuestionTime(allowedTime); // Set the question time
+          setTotalTimeLeft(allowedTime); // Set the total quiz time
+        } else {
+          alert("Quiz set not found.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching quiz set data:", error);
+        alert("Failed to load quiz set data. Please try again later.");
+      });
+
+    // Fetch questions for the quiz set
     axios.get(`http://localhost:5000/questions?quiz_id=${Number(quizSetId)}`)
       .then((response) => {
         setQuestions(response.data);
-        setTotalTimeLeft(response.data.length * 45); // Set total quiz time dynamically
       })
       .catch((error) => {
         console.error("Error fetching questions:", error);
@@ -68,14 +87,14 @@ const QuizSetPage = () => {
   const handleNextClick = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setQuestionTime(45); // Reset timer for next question
+      setQuestionTime(totalTimeLeft); // Reset timer for next question using totalTimeLeft
     }
   };
 
   const handlePreviousClick = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
-      setQuestionTime(45); // Reset timer for previous question
+      setQuestionTime(totalTimeLeft); // Reset timer for previous question using totalTimeLeft
     }
   };
 
@@ -102,7 +121,7 @@ const QuizSetPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 py-10">
-      <h1 className="text-3xl font-bold text-center mb-6">{`Quiz Set ${quizSetId} - ${category} Quiz`}</h1>
+      <h1 className="text-3xl font-bold text-center mb-6">{`${quizTitle} - ${category} Quiz`}</h1>
 
       <div className="max-w-screen-lg mx-auto relative p-6 bg-white shadow-lg rounded-lg">
         {/* Timer at Top Right */}

@@ -261,9 +261,16 @@ app.get('/categories', async (req, res) => {
 app.get('/quizsets', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT quiz.quiz_title, category.category_title , quiz.quiz_id
+      `SELECT 
+         quiz.quiz_title, 
+         category.category_title,
+         quiz.quiz_id,
+         COUNT(question.question_id) AS no_of_questions,
+         (COUNT(question.question_id) * 45) AS allowed_time
        FROM quiz
-       JOIN category ON quiz.category_id = category.category_id`
+       JOIN category ON quiz.category_id = category.category_id
+       LEFT JOIN question ON quiz.quiz_id = question.quiz_id
+       GROUP BY quiz.quiz_title, category.category_title, quiz.quiz_id`
     );
     res.json(result.rows);
   } catch (err) {
@@ -271,6 +278,7 @@ app.get('/quizsets', async (req, res) => {
     res.status(500).json({ error: 'Database query failed' });
   }
 });
+
 
 app.get("/questions", async (req, res) => {
   try {
