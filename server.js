@@ -16,6 +16,7 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
+//Sign Up Login
 app.post("/signup", async (req, res) => {
   const { username, email, password, userType } = req.body;
 
@@ -103,7 +104,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
+// For Creator to add questions
 app.post('/addQuestions', async (req, res) => {
   const { questions } = req.body;
 
@@ -145,7 +146,7 @@ app.post('/addQuestions', async (req, res) => {
   }
 });
 
-
+// For creators to create quiz
 app.post('/createQuiz', async (req, res) => {
   const { title, categoryId, creatorId, adminId, submittedDate } = req.body;
 
@@ -161,6 +162,57 @@ app.post('/createQuiz', async (req, res) => {
   }
 });
 
+// For creators and players to get categories
+app.get('/categories', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT category_id, category_title, description FROM category');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database query failed' });
+  }
+});
+
+// For creators to get their created quizzes in history or in recently created quiz
+app.get("/creator-created-quiz", async (req, res) => {
+  const { creator_id } = req.query;
+
+  try {
+    const query = `
+      SELECT q.quiz_id, q.quiz_title, c.category_title, q.isapproved
+      FROM quiz q
+      JOIN category c ON q.category_id = c.category_id
+      WHERE q.creator_id = $1 AND q.isapproved = 'approved'
+    `;
+
+    const result = await pool.query(query, [creator_id]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching quizzes:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// For creators to delete quiz
+app.delete("/clear-quiz", async (req, res) => {
+  const { quiz_id } = req.query; // Use req.query for query parameters
+  console.log("Deleting quiz with quiz_id:", quiz_id); // Debugging
+  try {
+    const query = "DELETE FROM quiz WHERE quiz_id = $1";
+    const result = await pool.query(query, [quiz_id]);
+    console.log("Delete query result:", result.rowCount); // Debugging
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Quiz not found" });
+    }
+    res.status(200).json({ message: "Quiz deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting record:", error);
+    res.status(500).json({ error: "Failed to delete quiz" });
+  }
+});
+
+
+// For players to record their score for the first time
 app.post('/save-score', async (req, res) => {
   const { totalScore, quizId, playerId } = req.body; // Get playerId from frontend request body
   
@@ -192,6 +244,7 @@ app.post('/save-score', async (req, res) => {
   }
 });
 
+// For players to update their score if they take the same quiz again
 app.put('/update-score', async (req, res) => {
   const { totalScore, quizId, playerId } = req.body;
 
@@ -219,6 +272,7 @@ app.put('/update-score', async (req, res) => {
   }
 });
 
+// For players to check score if they have taken the specific quiz or not
 app.get("/check-score", async (req, res) => {
   const { playerId, quizId } = req.query;
 
@@ -245,19 +299,7 @@ app.get("/check-score", async (req, res) => {
 });
 
 
-// Endpoint to fetch categories
-app.get('/categories', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT category_id, category_title, description FROM category');
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database query failed' });
-  }
-});
-
-
-// Endpoint to fetch quizsets along with category title
+// For players to get quiz sets under each category
 app.get('/quizsets', async (req, res) => {
   try {
     const result = await pool.query(
@@ -270,6 +312,7 @@ app.get('/quizsets', async (req, res) => {
        FROM quiz
        JOIN category ON quiz.category_id = category.category_id
        LEFT JOIN question ON quiz.quiz_id = question.quiz_id
+       WHERE quiz.isapproved = 'approved'  
        GROUP BY quiz.quiz_title, category.category_title, quiz.quiz_id`
     );
     res.json(result.rows);
@@ -279,7 +322,7 @@ app.get('/quizsets', async (req, res) => {
   }
 });
 
-
+// For players to get questions for each quiz
 app.get("/questions", async (req, res) => {
   try {
     const { quiz_id } = req.query; // Get quiz_id from query params
@@ -307,6 +350,7 @@ app.get("/questions", async (req, res) => {
   }
 });
 
+// For player to get the quizzes that took
 app.get("/player-history", async (req, res) => {
   const { player_id } = req.query;
   
@@ -327,45 +371,9 @@ app.get("/player-history", async (req, res) => {
   }
 });
 
-app.get("/creator-created-quiz", async (req, res) => {
-  const { creator_id } = req.query;
-  
-  try {
-    const query = `
-      SELECT q.quiz_id, q.quiz_title, c.category_title
-      FROM quiz q
-      JOIN category c ON q.category_id = c.category_id
-      WHERE q.creator_id = $1
-    `;
-
-    const result = await pool.query(query, [creator_id]);
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Error fetching quizzes:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-app.delete("/clear-quiz", async (req, res) => {
-  const { quiz_id } = req.query; // Use req.query for query parameters
-  console.log("Deleting quiz with quiz_id:", quiz_id); // Debugging
-  try {
-    const query = "DELETE FROM quiz WHERE quiz_id = $1";
-    const result = await pool.query(query, [quiz_id]);
-    console.log("Delete query result:", result.rowCount); // Debugging
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "Quiz not found" });
-    }
-    res.status(200).json({ message: "Quiz deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting record:", error);
-    res.status(500).json({ error: "Failed to delete quiz" });
-  }
-});
-
-
+// For players to delete a single score record
 app.delete("/clear-single-record", async (req, res) => {
-  const { score_id } = req.query; // Use req.query for query parameters
+  const { score_id } = req.query; 
   console.log("Deleting record with score_id:", score_id); // Debugging
   try {
     const query = "DELETE FROM scorerecord WHERE score_id = $1";
@@ -381,6 +389,7 @@ app.delete("/clear-single-record", async (req, res) => {
   }
 });
 
+// For players to delete their all score record
 app.delete("/clear-all-records", async (req, res) => {
   const { player_id } = req.query;
   try {
@@ -394,10 +403,9 @@ app.delete("/clear-all-records", async (req, res) => {
 });
 
 
-//For Admin
+//For Admin to get all users in user page
 app.get("/all-users", async (req, res) => {
   try {
-    // SQL query to get all creators and players as separate sets, then combine them using UNION
     const query = `
       SELECT username, email, type, creator_id as id
       FROM creator
@@ -418,7 +426,64 @@ app.get("/all-users", async (req, res) => {
   }
 });
 
+// For admin to review the quizes
+app.get('/review_quiz', async (req, res) => {
+  try {
+      const result = await pool.query(`
+          SELECT 
+              quiz.quiz_id,
+              quiz.isapproved,
+              quiz.quiz_title,
+              creator.username,
+              category.category_title,
+              COUNT(question.question_id) AS number_of_questions,
+              quiz.submitted_date
+          FROM 
+              quiz
+          JOIN 
+              creator ON quiz.creator_id = creator.creator_id
+          JOIN 
+              question ON question.quiz_id = quiz.quiz_id
+          JOIN 
+              category ON quiz.category_id = category.category_id  
+          GROUP BY 
+              quiz.quiz_id, creator.username, category.category_title;  
+      `);
 
+      res.json(result.rows);
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+  }
+});
+
+//For admin to update if they approve or reject the quiz
+app.put('/approve_quiz', async (req, res) => {
+  const { quizId, status } = req.query; 
+
+  if (!['approved', 'rejected'].includes(status)) {
+    return res.status(400).json({ message: 'Invalid status. Must be "approved" or "rejected".' });
+  }
+
+  try {
+    const result = await pool.query(
+      'UPDATE quiz SET isapproved = $1 WHERE quiz_id = $2 RETURNING *',
+      [status, quizId] 
+    );
+
+    if (result.rows.length > 0) {
+      return res.status(200).json({
+        message: 'Quiz approval status updated successfully.',
+        quiz: result.rows[0] 
+      });
+    } else {
+      return res.status(404).json({ message: 'Quiz not found.' });
+    }
+  } catch (error) {
+    console.error('Error executing query', error);
+    return res.status(500).json({ message: 'Error updating quiz status.', error });
+  }
+});
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

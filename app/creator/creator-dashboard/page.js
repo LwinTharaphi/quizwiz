@@ -1,12 +1,44 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import "@fortawesome/fontawesome-free/css/all.min.css";
-
 
 const QuizCreator = () => {
     const router = useRouter();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [quizzes, setQuizzes] = useState([]); // State to store quizzes
+    const [loading, setLoading] = useState(true); // Loading state to show while fetching data
+    const [error, setError] = useState(null); // Error state for any potential API errors
+    const [creatorId, setCreatorId] = useState("");
+
+    useEffect(() => {
+        const creatorId = localStorage.getItem("creatorId");
+        if (creatorId) {
+            setCreatorId(creatorId);
+        } else {
+            console.error("Creator ID not found in localStorage");
+            setLoading(false);
+            return;
+        }
+
+        if (creatorId) {
+            // Fetch quizzes from the API based on creator_id
+            fetch(`http://localhost:5000/creator-created-quiz?creator_id=${creatorId}`)
+                .then((response) => response.json())
+                .then((data) => {
+                    setQuizzes(data); // Set fetched quizzes to state
+                    setLoading(false); // Stop loading
+                })
+                .catch((err) => {
+                    console.error("Error fetching quizzes:", err);
+                    setError("Failed to load quizzes"); // Set error message if the fetch fails
+                    setLoading(false); // Stop loading
+                });
+        } else {
+            setError("Creator ID not found in localStorage");
+            setLoading(false);
+        }
+    }, []);
 
     const handleCreateQuiz = () => {
         router.push("/creator/create"); // Navigate to the "Create" page
@@ -15,12 +47,6 @@ const QuizCreator = () => {
     const handleNavigation = (path) => {
         router.push(path);
     };
-
-    const quizzes = [
-        { name: "Science Basics", category: "Science" },
-        { name: "History 101", category: "History" },
-        { name: "Math Trivia", category: "Mathematics" },
-    ]; // Example quizzes
 
     return (
         <div style={styles.container}>
@@ -32,11 +58,7 @@ const QuizCreator = () => {
                 <i className="fas fa-user-circle" style={styles.profileIcon}></i>
                 {isDropdownOpen && (
                     <div style={styles.dropdownMenu}>
-                        <div
-                            style={styles.dropdownItem}
-                        >
-                            Home
-                        </div>
+                        <div style={styles.dropdownItem}>Home</div>
                         <div
                             style={styles.dropdownItem}
                             onClick={() => handleNavigation("/creator/aboutus")}
@@ -59,18 +81,19 @@ const QuizCreator = () => {
                 )}
             </div>
 
-
             {/* Main Content */}
             <div style={styles.content}>
                 {/* Left Side: Recently Created Quizzes */}
                 <div style={styles.leftPane}>
                     <h3 style={styles.heading}>Recently Created Quizzes</h3>
+                    {loading && <p>Loading quizzes...</p>}
+                    {error && <p style={{ color: "red" }}>{error}</p>}
                     <ul style={styles.quizList}>
                         {quizzes.map((quiz, index) => (
                             <li key={index} style={styles.quizItem}>
-                                <span style={styles.quizName}>{quiz.name}</span>
+                                <span style={styles.quizName}>{quiz.quiz_title}</span>
                                 <br />
-                                <span style={styles.quizCategory}>{quiz.category}</span>
+                                <span style={styles.quizCategory}>{quiz.category_title}</span>
                             </li>
                         ))}
                     </ul>
@@ -109,7 +132,6 @@ const styles = {
         boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
         borderRadius: "50%", // Optional: Keep a circular feel
     },
-
     dropdownMenu: {
         position: "absolute",
         top: "60px",
