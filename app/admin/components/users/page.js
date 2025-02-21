@@ -24,7 +24,7 @@ const UsersTable = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/all-users`); // Fetch user data from the API
+        const response = await fetch(`http://localhost:4000/all-users`); // Fetch user data from the API
         const data = await response.json();
         setUserData(data); // Update the state with the fetched data
       } catch (error) {

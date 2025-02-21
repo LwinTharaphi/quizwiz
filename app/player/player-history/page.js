@@ -19,7 +19,7 @@ export default function PlayerHistory() {
 
     const fetchPlayerHistory = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/player-history?player_id=${playerId}`);
+        const response = await fetch(`http://localhost:4000/player-history?player_id=${playerId}`);
         if (!response.ok) {
           throw new Error("Failed to fetch player history");
         }
@@ -41,7 +41,7 @@ export default function PlayerHistory() {
     console.log("Deleting record with score_id:", scoreId); // Debugging
     try {
       const response = await fetch(
-        `http://localhost:5000/clear-single-record?score_id=${scoreId}`,
+        `http://localhost:4000/clear-single-record?score_id=${scoreId}`,
         {
           method: "DELETE",
         }
@@ -61,7 +61,7 @@ export default function PlayerHistory() {
   const handleClearAll = async () => {
     try {
       const response = await fetch(
-        `http://localhost:5000/clear-all-records?player_id=${playerId}`,
+        `http://localhost:4000/clear-all-records?player_id=${playerId}`,
         {
           method: "DELETE",
         }

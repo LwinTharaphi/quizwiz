@@ -23,7 +23,7 @@ const QuizCreator = () => {
 
         if (creatorId) {
             // Fetch quizzes from the API based on creator_id
-            fetch(`http://localhost:5000/creator-created-quiz?creator_id=${creatorId}`)
+            fetch(`http://localhost:4000/creator-created-quiz?creator_id=${creatorId}`)
                 .then((response) => response.json())
                 .then((data) => {
                     setQuizzes(data); // Set fetched quizzes to state

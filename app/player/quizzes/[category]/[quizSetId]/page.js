@@ -27,7 +27,7 @@ const QuizSetPage = () => {
     }
 
     // Fetch quiz set data to get allowed_time and quiz title
-    axios.get(`http://localhost:5000/quizsets`)
+    axios.get(`http://localhost:4000/quizsets`)
       .then((response) => {
         const quizSet = response.data.find(quiz => quiz.quiz_id === parseInt(quizSetId));
         if (quizSet) {
@@ -45,7 +45,7 @@ const QuizSetPage = () => {
       });
 
     // Fetch questions for the quiz set
-    axios.get(`http://localhost:5000/questions?quiz_id=${Number(quizSetId)}`)
+    axios.get(`http://localhost:4000/questions?quiz_id=${Number(quizSetId)}`)
       .then((response) => {
         setQuestions(response.data);
       })

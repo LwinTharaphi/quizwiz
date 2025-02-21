@@ -31,7 +31,7 @@ const YourQuiz = () => {
 
         const fetchQuizzes = async () => {
             try {
-                const response = await fetch(`http://localhost:5000/creator-created-quiz?creator_id=${creatorId}`);
+                const response = await fetch(`http://localhost:4000/creator-created-quiz?creator_id=${creatorId}`);
                 const data = await response.json();
                 if (response.ok) {
                     setQuizzes(data);

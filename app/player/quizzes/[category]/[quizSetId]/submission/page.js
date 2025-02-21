@@ -40,7 +40,7 @@ const SubmissionPage = () => {
 
           // First, check if a record already exists for this player and quiz
           const checkResponse = await fetch(
-            `http://localhost:5000/check-score?playerId=${playerId}&quizId=${quizId}`
+            `http://localhost:4000/check-score?playerId=${playerId}&quizId=${quizId}`
           );
 
           if (!checkResponse.ok) {
@@ -54,7 +54,7 @@ const SubmissionPage = () => {
           const endpoint = recordExists ? "/update-score" : "/save-score";
           const method = recordExists ? "PUT" : "POST";
 
-          const scoreResponse = await fetch(`http://localhost:5000${endpoint}`, {
+          const scoreResponse = await fetch(`http://localhost:4000${endpoint}`, {
             method,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(requestData),

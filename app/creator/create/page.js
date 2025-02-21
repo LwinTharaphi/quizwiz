@@ -10,7 +10,7 @@ const CreatePage = () => {
 
     useEffect(() => {
         // Fetch categories from the backend
-        axios.get('http://localhost:5000/categories')
+        axios.get('http://localhost:4000/categories')
             .then((response) => {
                 setCategories(response.data);
             })

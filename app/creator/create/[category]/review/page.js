@@ -31,7 +31,7 @@ const ReviewPage = () => {
     // Step 3: Fetch categories list from backend
     const fetchCategories = async () => {
       try {
-        const response = await fetch("http://localhost:5000/categories");
+        const response = await fetch("http://localhost:4000/categories");
         const categoriesData = await response.json();
         setCategories(categoriesData);
       } catch (error) {

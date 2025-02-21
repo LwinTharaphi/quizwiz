@@ -18,7 +18,7 @@ const AnswersPage = () => {
       if (!quiz_id) return;  // If quiz_id is not available yet, do nothing
 
       try {
-        const response = await axios.get(`http://localhost:5000/questions?quiz_id=${quiz_id}`);
+        const response = await axios.get(`http://localhost:4000/questions?quiz_id=${quiz_id}`);
         setQuestions(response.data);
       } catch (err) {
         setError(err.message || "Error fetching questions");

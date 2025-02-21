@@ -13,7 +13,7 @@ const QuizReviewPage = () => {
   useEffect(() => {
     const fetchQuizzes = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/review_quiz");
+        const response = await axios.get("http://localhost:4000/review_quiz");
         setQuizzes(response.data); 
       } catch (error) {
         console.error("Error fetching quiz data:", error);
@@ -44,7 +44,7 @@ const QuizReviewPage = () => {
   // Handle approval
   const approveQuiz = async (quizId) => {
     try {
-      await axios.put(`http://localhost:5000/approve_quiz?quizId=${quizId}&status=approved`);
+      await axios.put(`http://localhost:4000/approve_quiz?quizId=${quizId}&status=approved`);
       setQuizzes((prevQuizzes) =>
         prevQuizzes.map((quiz) =>
           quiz.quiz_id === quizId ? { ...quiz, isapproved: 'approved' } : quiz

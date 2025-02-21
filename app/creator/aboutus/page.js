@@ -57,7 +57,7 @@ const AboutUs = () => {
                     <p style={styles.text}>
                         Welcome to our website! This platform allows you to create, manage, 
                         and participate in interactive quizzes across various topics. 
-                        Whether you're a teacher, student, or trivia enthusiast, our tools 
+                        Whether you are a teacher, student, or trivia enthusiast, our tools 
                         are designed to make learning and fun seamless. Explore the endless 
                         possibilities of quiz creation and take your knowledge to the next level!
                     </p>

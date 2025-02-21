@@ -12,7 +12,7 @@ export default function Quizzes() {
 
   useEffect(() => {
     // Fetch quizzes from the backend
-    axios.get('http://localhost:5000/quizsets')
+    axios.get('http://localhost:4000/quizsets')
       .then((response) => {
         setQuizzes(response.data);
       })
