@@ -531,17 +531,16 @@ app.put("/approve_quiz", async (req, res) => {
   try {
     const query = "UPDATE quiz SET isapproved = $1 WHERE quiz_id = $2 RETURNING *;";
     const result = await pool.query(query, [status, quizId]);
-    if (result.rows.length > 0) {
-      res.status(200).json({
-        message: "Quiz approval status updated successfully.",
-        quiz: result.rows[0],
-      });
-    } else {
-      res.status(404).json({ message: "Quiz not found." });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Quiz not found." });
     }
-  } catch (error) {
-    console.error("Error updating quiz status:", error);
-    res.status(500).json({ message: "Error updating quiz status.", error });
+    return res.status(200).json({
+      message: "Quiz approval status updated successfully.",
+      quiz: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Error updating quiz status:", err);
+    return res.status(500).json({ message: "Error updating quiz status.", error: err });
   }
 });
 
