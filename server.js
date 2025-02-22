@@ -545,51 +545,6 @@ app.put("/approve_quiz", async (req, res) => {
   }
 });
 
-//For admin system activity
-app.get("/admin/stats", async (req, res) => {
-  try {
-    // Fetch total number of quizzes created
-    const totalQuizzes = await pool.query("SELECT COUNT(*) FROM quiz");
-
-    // Fetch total number of quizzes taken (score records indicate quizzes played)
-    const totalQuizzesTaken = await pool.query("SELECT COUNT(*) FROM scorerecord");
-
-    // Fetch total users (sum of creators and players)
-    const totalUsers = await pool.query(`
-      SELECT (
-        (SELECT COUNT(*) FROM creator) + 
-        (SELECT COUNT(*) FROM player)
-      ) AS total_users
-    `);
-
-    // Fetch category distribution
-    const categoryStats = await pool.query(`
-      SELECT c.category_title, COUNT(q.quiz_id) AS count
-      FROM quiz q
-      JOIN category c ON q.category_id = c.category_id
-      GROUP BY c.category_title
-    `);
-
-    // Fetch user distribution (creators vs players)
-    const creatorsCount = await pool.query("SELECT COUNT(*) AS count FROM creator");
-    const playersCount = await pool.query("SELECT COUNT(*) AS count FROM player");
-
-    res.json({
-      totalQuizzes: totalQuizzes.rows[0].count,
-      totalQuizzesTaken: totalQuizzesTaken.rows[0].count,
-      totalUsers: totalUsers.rows[0].total_users,
-      categoryStats: categoryStats.rows,
-      userDistribution: {
-        creators: creatorsCount.rows[0].count,
-        players: playersCount.rows[0].count,
-      },
-    });
-  } catch (err) {
-    console.error("Error fetching stats:", err);
-    res.status(500).json({ error: "Database error" });
-  }
-});
-
 //For Quiz Review from Admin
 app.get("/quiz_details", async (req, res) => {
   const { quizId } = req.query;
@@ -640,6 +595,53 @@ app.get("/quiz_details", async (req, res) => {
     res.status(500).json({ error: "Database error" });
   }
 });
+
+//For admin system activity
+app.get("/admin/stats", async (req, res) => {
+  try {
+    // Fetch total number of quizzes created
+    const totalQuizzes = await pool.query("SELECT COUNT(*) FROM quiz");
+
+    // Fetch total number of quizzes taken (score records indicate quizzes played)
+    const totalQuizzesTaken = await pool.query("SELECT COUNT(*) FROM scorerecord");
+
+    // Fetch total users (sum of creators and players)
+    const totalUsers = await pool.query(`
+      SELECT (
+        (SELECT COUNT(*) FROM creator) + 
+        (SELECT COUNT(*) FROM player)
+      ) AS total_users
+    `);
+
+    // Fetch category distribution
+    const categoryStats = await pool.query(`
+      SELECT c.category_title, COUNT(q.quiz_id) AS count
+      FROM quiz q
+      JOIN category c ON q.category_id = c.category_id
+      GROUP BY c.category_title
+    `);
+
+    // Fetch user distribution (creators vs players)
+    const creatorsCount = await pool.query("SELECT COUNT(*) AS count FROM creator");
+    const playersCount = await pool.query("SELECT COUNT(*) AS count FROM player");
+
+    res.json({
+      totalQuizzes: totalQuizzes.rows[0].count,
+      totalQuizzesTaken: totalQuizzesTaken.rows[0].count,
+      totalUsers: totalUsers.rows[0].total_users,
+      categoryStats: categoryStats.rows,
+      userDistribution: {
+        creators: creatorsCount.rows[0].count,
+        players: playersCount.rows[0].count,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching stats:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+
 
 const PORT = 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
