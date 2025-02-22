@@ -1,47 +1,40 @@
-import { useState } from "react";
+"use client";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
-
-const initialCategories = [
-  { id: 1, name: "Science", description: "General science topics including physics, chemistry, and biology", quizzes: 15 },
-  { id: 2, name: "Technology", description: "Modern technology, computers, and programming", quizzes: 12 },
-  { id: 3, name: "History", description: "World history and important historical events", quizzes: 8 },
-  { id: 4, name: "Mathematics", description: "Various mathematical concepts and problem solving", quizzes: 10 },
-  { id: 5, name: "Literature", description: "Classic and modern literature questions", quizzes: 6 },
-  { id: 6, name: "Geography", description: "World geography and map knowledge", quizzes: 9 },
-  { id: 7, name: "Sports", description: "Various sports and athletic competitions", quizzes: 7 },
-  { id: 8, name: "Music", description: "Musical knowledge and theory", quizzes: 5 },
-  { id: 9, name: "Art", description: "Art history and famous artists", quizzes: 4 },
-  { id: 10, name: "Movies", description: "Cinema and film industry knowledge", quizzes: 11 },
-  { id: 11, name: "Physics", description: "Concepts of physics and problem-solving", quizzes: 14 },
-  { id: 12, name: "Chemistry", description: "Chemical reactions and periodic table knowledge", quizzes: 16 },
-  { id: 13, name: "Biology", description: "Study of living organisms and ecosystems", quizzes: 9 },
-  { id: 14, name: "Programming", description: "Introduction to programming and algorithms", quizzes: 13 },
-  { id: 15, name: "Astronomy", description: "Exploring stars, planets, and galaxies", quizzes: 6 },
-  { id: 16, name: "Economics", description: "Basic economics and market principles", quizzes: 8 },
-  { id: 17, name: "Psychology", description: "Understanding human behavior and mind", quizzes: 7 },
-  { id: 18, name: "Philosophy", description: "Philosophical questions and theories", quizzes: 5 },
-  { id: 19, name: "Health", description: "Health and wellness knowledge", quizzes: 10 },
-  { id: 20, name: "Education", description: "Education theories and practices", quizzes: 12 },
-];
+import axios from "axios";
 
 const Categories = () => {
-  const [categories, setCategories] = useState(initialCategories);
+  const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [newCategory, setNewCategory] = useState({ name: "", description: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Fetch categories from backend
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = () => {
+    axios
+      .get("http://localhost:4000/categories")
+      .then((response) => setCategories(response.data))
+      .catch((error) => console.error("Error fetching categories:", error));
+  };
+
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value.toLowerCase());
+    setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
 
   const filteredCategories = categories.filter(
     (category) =>
-      category.name.toLowerCase().includes(searchTerm) ||
-      category.description.toLowerCase().includes(searchTerm)
+      category.category_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      category.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
@@ -50,11 +43,63 @@ const Categories = () => {
     currentPage * itemsPerPage
   );
 
-  const handleAddCategory = () => {
-    const newId = categories.length + 1;
-    setCategories([...categories, { id: newId, ...newCategory, quizzes: 0 }]);
-    setNewCategory({ name: "", description: "" });
+  // Handle Add or Update Category
+  const handleSaveCategory = () => {
+    if (!newCategory.name || !newCategory.description) return;
+
+    if (isEditMode && selectedCategory) {
+      // Update existing category
+      axios
+        .put(`http://localhost:4000/categories/${selectedCategory.category_id}`, {
+          category_title: newCategory.name,
+          description: newCategory.description,
+        })
+        .then((response) => {
+          setCategories(
+            categories.map((cat) =>
+              cat.category_id === selectedCategory.category_id ? response.data : cat
+            )
+          );
+          closeModal();
+        })
+        .catch((error) => console.error("Error updating category:", error));
+    } else {
+      // Create new category
+      axios
+        .post("http://localhost:4000/categories", {
+          category_title: newCategory.name,
+          description: newCategory.description,
+        })
+        .then((response) => {
+          setCategories([...categories, response.data]);
+          closeModal();
+        })
+        .catch((error) => console.error("Error adding category:", error));
+    }
+  };
+
+  // Handle Delete
+  const handleDelete = (id) => {
+    axios
+      .delete(`http://localhost:4000/categories/${id}`)
+      .then(() => {
+        setCategories(categories.filter((cat) => cat.category_id !== id));
+      })
+      .catch((error) => console.error("Error deleting category:", error));
+  };
+
+  const openEditModal = (category) => {
+    setSelectedCategory(category);
+    setNewCategory({ name: category.category_title, description: category.description });
+    setIsEditMode(true);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
     setIsModalOpen(false);
+    setIsEditMode(false);
+    setSelectedCategory(null);
+    setNewCategory({ name: "", description: "" });
   };
 
   const handleInputChange = (e) => {
@@ -72,7 +117,11 @@ const Categories = () => {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-100">Category</h2>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setIsModalOpen(true);
+            setIsEditMode(false);
+            setNewCategory({ name: "", description: "" });
+          }}
           className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
         >
           Add New Category
@@ -105,17 +154,27 @@ const Categories = () => {
           <tbody className="divide-y divide-gray-700">
             {paginatedCategories.map((category) => (
               <motion.tr
-                key={category.id}
+                key={category.category_id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
               >
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{category.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{category.category_title}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{category.description}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{category.quizzes}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{category.quiz_count || 0}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  <button className="text-blue-400 hover:text-blue-300 mr-2">Edit</button>
-                  <button className="text-red-400 hover:text-red-300">Delete</button>
+                  <button
+                    onClick={() => openEditModal(category)}
+                    className="text-blue-400 hover:text-blue-300 mr-2"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(category.category_id)}
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    Delete
+                  </button>
                 </td>
               </motion.tr>
             ))}
@@ -166,9 +225,13 @@ const Categories = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-1/3">
-            <h3 className="text-xl font-semibold mb-4 text-black">Create New Category</h3>
+            <h3 className="text-xl font-semibold mb-4 text-black">
+              {isEditMode ? "Edit Category" : "Create New Category"}
+            </h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category Name:</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Category Name:
+              </label>
               <input
                 type="text"
                 name="name"
@@ -178,7 +241,9 @@ const Categories = () => {
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description:</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description:
+              </label>
               <input
                 type="text"
                 name="description"
@@ -189,16 +254,16 @@ const Categories = () => {
             </div>
             <div className="flex justify-end space-x-4">
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
-              >
-                Close
-              </button>
-              <button
-                onClick={handleAddCategory}
+                onClick={handleSaveCategory}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
               >
-                Create
+                {isEditMode ? "Update" : "Create"}
+              </button>
+              <button
+                onClick={closeModal}
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+              >
+                Cancel
               </button>
             </div>
           </div>

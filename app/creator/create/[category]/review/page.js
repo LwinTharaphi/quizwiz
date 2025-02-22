@@ -58,7 +58,7 @@ const ReviewPage = () => {
 
       try {
         // Step 1: Create Quiz
-        const quizResponse = await fetch("http://localhost:5000/createQuiz", {
+        const quizResponse = await fetch("http://localhost:4000/createQuiz", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(quizData),
@@ -88,7 +88,7 @@ const ReviewPage = () => {
           console.log("Sending question data:", questionData);
 
           // Step 3: Add Questions
-          const questionsResponse = await fetch("http://localhost:5000/addQuestions", {
+          const questionsResponse = await fetch("http://localhost:4000/addQuestions", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ questions: questionData }),

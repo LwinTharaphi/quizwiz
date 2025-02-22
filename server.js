@@ -163,13 +163,81 @@ app.post('/createQuiz', async (req, res) => {
 });
 
 // For creators and players to get categories
-app.get('/categories', async (req, res) => {
+// GET Categories with Quiz Count
+app.get("/categories", async (req, res) => {
   try {
-    const result = await pool.query('SELECT category_id, category_title, description FROM category');
+    const query = `
+      SELECT 
+        c.category_id, 
+        c.category_title, 
+        c.description, 
+        COALESCE(COUNT(q.quiz_id), 0) AS quiz_count 
+      FROM category c
+      LEFT JOIN quiz q ON c.category_id = q.category_id
+      GROUP BY c.category_id, c.category_title, c.description
+      ORDER BY c.category_id;
+    `;
+    const result = await pool.query(query);
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database query failed' });
+    console.error("Error fetching categories:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// POST Create New Category
+app.post("/categories", async (req, res) => {
+  const { category_title, description } = req.body;
+  if (!category_title || !description) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+  try {
+    const query = `
+      INSERT INTO category (category_title, description, admin_id) 
+      VALUES ($1, $2, 1) RETURNING *;
+    `;
+    const result = await pool.query(query, [category_title, description]);
+    res.status(201).json(result.rows[0]); // Return new category
+  } catch (err) {
+    console.error("Error adding category:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// PUT Update a Category
+app.put("/categories/:id", async (req, res) => {
+  const { id } = req.params;
+  const { category_title, description } = req.body;
+  try {
+    const query = `
+      UPDATE category 
+      SET category_title = $1, description = $2 
+      WHERE category_id = $3 RETURNING *;
+    `;
+    const result = await pool.query(query, [category_title, description, id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error updating category:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// DELETE a Category
+app.delete("/categories/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const query = `DELETE FROM category WHERE category_id = $1 RETURNING *;`;
+    const result = await pool.query(query, [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    res.status(200).json({ message: "Category deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting category:", err);
+    res.status(500).json({ error: "Database error" });
   }
 });
 
