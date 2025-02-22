@@ -221,7 +221,7 @@ const QuizReviewPage = () => {
       {isModalOpen && selectedQuiz && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-2/3 max-h-[80vh] overflow-y-auto">
-            <h3 className="text-xl font-semibold mb-4 text-black">Quiz Details</h3>
+            <h3 className="text-xl font-semibold mb-4 text-black">Quiz Review Details</h3>
             <p className="mb-2">
               <strong>Title:</strong> {selectedQuiz.quiz_title}
             </p>
