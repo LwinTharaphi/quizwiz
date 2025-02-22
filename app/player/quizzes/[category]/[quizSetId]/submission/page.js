@@ -88,6 +88,10 @@ const SubmissionPage = () => {
     router.push(`/player/quizzes/${category}/${quizId}`);
   };
 
+  const handleBackToHome = () => {
+    router.push("/player/categories");
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-10">
       <div className="max-w-screen-lg mx-auto text-center">
@@ -130,6 +134,12 @@ const SubmissionPage = () => {
           >
             Retake Quiz
           </button>
+          <button
+          onClick={handleBackToHome}
+          className="bg-green-500 text-white px-6 py-3 rounded-md shadow-lg hover:bg-green-600 transition-colors duration-300"
+        >
+          Back to Home
+        </button>
         </div>
 
         {/* If submitting */}

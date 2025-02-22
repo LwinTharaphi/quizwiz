@@ -1,24 +1,28 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";  // Use usePathname from next/navigation
+import { usePathname, useRouter } from "next/navigation"; // Import useRouter for navigation
 import axios from "axios";
 
 const AnswersPage = () => {
-  const pathname = usePathname();  // Get the current pathname
+  const pathname = usePathname(); // Get the current pathname
+  const router = useRouter(); // Initialize router
+
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Extract quiz_id from the URL path
-  const quiz_id = pathname?.split('/')[4];  // Assuming the path is /player/quizzes/category/[quiz_id]/answers
+  // Extract category and quizSetId from the URL path
+  const pathSegments = pathname?.split("/");
+  const category = pathSegments?.[3];  // Extract category
+  const quizSetId = pathSegments?.[4]; // Extract quizSetId
 
   // Fetch questions based on quiz_id from URL
   useEffect(() => {
-    const fetchQuestions = async () => {
-      if (!quiz_id) return;  // If quiz_id is not available yet, do nothing
+    if (!quizSetId) return; // If quizSetId is not available yet, do nothing
 
+    const fetchQuestions = async () => {
       try {
-        const response = await axios.get(`http://localhost:4000/questions?quiz_id=${quiz_id}`);
+        const response = await axios.get(`http://localhost:4000/questions?quiz_id=${quizSetId}`);
         setQuestions(response.data);
       } catch (err) {
         setError(err.message || "Error fetching questions");
@@ -28,7 +32,12 @@ const AnswersPage = () => {
     };
 
     fetchQuestions();
-  }, [quiz_id]);
+  }, [quizSetId]);
+
+  // Handle Back Button Click
+  const handleBackToSubmission = () => {
+    router.push(`/player/quizzes/${category}/${quizSetId}/submission`);
+  };
 
   // If data is loading
   if (loading) {
@@ -40,7 +49,7 @@ const AnswersPage = () => {
       </div>
     );
   }
-  
+
   // If an error occurs
   if (error) {
     return (
@@ -71,6 +80,16 @@ const AnswersPage = () => {
               </p>
             </div>
           ))}
+        </div>
+
+        {/* Back Button */}
+        <div className="mt-6">
+          <button
+            onClick={handleBackToSubmission}
+            className="bg-gray-500 text-white px-6 py-3 rounded-md shadow-lg hover:bg-gray-600 transition-colors duration-300"
+          >
+            Back to Submission
+          </button>
         </div>
       </div>
     </div>
