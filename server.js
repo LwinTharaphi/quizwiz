@@ -495,61 +495,53 @@ app.get("/all-users", async (req, res) => {
 });
 
 // For admin to review the quizes
-app.get('/review_quiz', async (req, res) => {
+// GET quizzes pending review (read-only)
+app.get("/review_quiz", async (req, res) => {
   try {
-      const result = await pool.query(`
-          SELECT 
-              quiz.quiz_id,
-              quiz.isapproved,
-              quiz.quiz_title,
-              creator.username,
-              category.category_title,
-              COUNT(question.question_id) AS number_of_questions,
-              quiz.submitted_date
-          FROM 
-              quiz
-          JOIN 
-              creator ON quiz.creator_id = creator.creator_id
-          JOIN 
-              question ON question.quiz_id = quiz.quiz_id
-          JOIN 
-              category ON quiz.category_id = category.category_id  
-          GROUP BY 
-              quiz.quiz_id, creator.username, category.category_title;  
-      `);
-
-      res.json(result.rows);
+    const query = `
+      SELECT 
+        q.quiz_id,
+        q.quiz_title,
+        q.isapproved,
+        q.submitted_date,
+        creator.username,
+        category.category_title,
+        COUNT(question.question_id) AS number_of_questions
+      FROM quiz q
+      JOIN creator ON q.creator_id = creator.creator_id
+      JOIN question ON question.quiz_id = q.quiz_id
+      JOIN category ON q.category_id = category.category_id  
+      GROUP BY q.quiz_id, creator.username, category.category_title, q.submitted_date, q.isapproved
+      ORDER BY q.submitted_date DESC;
+    `;
+    const result = await pool.query(query);
+    res.json(result.rows);
   } catch (err) {
-      console.error(err);
-      res.status(500).send('Server error');
+    console.error("Error fetching review quizzes:", err);
+    res.status(500).send("Server error");
   }
 });
 
-//For admin to update if they approve or reject the quiz
-app.put('/approve_quiz', async (req, res) => {
-  const { quizId, status } = req.query; 
-
-  if (!['approved', 'rejected'].includes(status)) {
+// PUT update quiz approval status (for Approve or Reject actions)
+app.put("/approve_quiz", async (req, res) => {
+  const { quizId, status } = req.query;
+  if (!["approved", "rejected"].includes(status)) {
     return res.status(400).json({ message: 'Invalid status. Must be "approved" or "rejected".' });
   }
-
   try {
-    const result = await pool.query(
-      'UPDATE quiz SET isapproved = $1 WHERE quiz_id = $2 RETURNING *',
-      [status, quizId] 
-    );
-
+    const query = "UPDATE quiz SET isapproved = $1 WHERE quiz_id = $2 RETURNING *;";
+    const result = await pool.query(query, [status, quizId]);
     if (result.rows.length > 0) {
-      return res.status(200).json({
-        message: 'Quiz approval status updated successfully.',
-        quiz: result.rows[0] 
+      res.status(200).json({
+        message: "Quiz approval status updated successfully.",
+        quiz: result.rows[0],
       });
     } else {
-      return res.status(404).json({ message: 'Quiz not found.' });
+      res.status(404).json({ message: "Quiz not found." });
     }
   } catch (error) {
-    console.error('Error executing query', error);
-    return res.status(500).json({ message: 'Error updating quiz status.', error });
+    console.error("Error updating quiz status:", error);
+    res.status(500).json({ message: "Error updating quiz status.", error });
   }
 });
 
@@ -594,6 +586,57 @@ app.get("/admin/stats", async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching stats:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+//For Quiz Review from Admin
+app.get("/quiz_details", async (req, res) => {
+  const { quizId } = req.query;
+  if (!quizId) {
+    return res.status(400).json({ error: "Missing quizId" });
+  }
+
+  try {
+    // 1. Fetch quiz info
+    const quizInfoQuery = `
+      SELECT q.quiz_id, q.quiz_title, q.isapproved, q.submitted_date,
+             creator.username, category.category_title
+      FROM quiz q
+      JOIN creator ON q.creator_id = creator.creator_id
+      JOIN category ON q.category_id = category.category_id
+      WHERE q.quiz_id = $1
+    `;
+    const quizInfoResult = await pool.query(quizInfoQuery, [quizId]);
+
+    if (quizInfoResult.rows.length === 0) {
+      return res.status(404).json({ error: "Quiz not found" });
+    }
+
+    const quizData = quizInfoResult.rows[0];
+
+    // 2. Fetch questions
+    const questionsQuery = `
+      SELECT question_id, question_text, option1, option2, option3, option4, correct_ans
+      FROM question
+      WHERE quiz_id = $1
+    `;
+    const questionsResult = await pool.query(questionsQuery, [quizId]);
+
+    // Combine quiz info + questions
+    const fullQuiz = {
+      quiz_id: quizData.quiz_id,
+      quiz_title: quizData.quiz_title,
+      isapproved: quizData.isapproved,
+      submitted_date: quizData.submitted_date,
+      username: quizData.username,
+      category_title: quizData.category_title,
+      questions: questionsResult.rows
+    };
+
+    res.json(fullQuiz);
+  } catch (err) {
+    console.error("Error fetching quiz details:", err);
     res.status(500).json({ error: "Database error" });
   }
 });
