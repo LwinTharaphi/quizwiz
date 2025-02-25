@@ -204,20 +204,42 @@ app.post("/categories", async (req, res) => {
   }
 });
 
-// PUT Update a Category
+// PUT Update a Category with quiz count preserved
 app.put("/categories/:id", async (req, res) => {
   const { id } = req.params;
   const { category_title, description } = req.body;
+  
   try {
+    // Use a Common Table Expression (CTE) to update and then join with the quiz table
     const query = `
-      UPDATE category 
-      SET category_title = $1, description = $2 
-      WHERE category_id = $3 RETURNING *;
+      WITH updated AS (
+        UPDATE category 
+        SET 
+          category_title = COALESCE($1, category_title),
+          description = COALESCE($2, description)
+        WHERE category_id = $3
+        RETURNING *
+      )
+      SELECT 
+        updated.*,
+        COALESCE(COUNT(q.quiz_id), 0) AS quiz_count
+      FROM updated
+      LEFT JOIN quiz q ON updated.category_id = q.category_id
+      GROUP BY updated.category_id, updated.category_title, updated.description, updated.admin_id;
     `;
-    const result = await pool.query(query, [category_title, description, id]);
+    
+    const values = [
+      category_title ?? null,
+      description ?? null,
+      id,
+    ];
+    
+    const result = await pool.query(query, values);
+    
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Category not found" });
     }
+    
     res.json(result.rows[0]);
   } catch (err) {
     console.error("Error updating category:", err);
